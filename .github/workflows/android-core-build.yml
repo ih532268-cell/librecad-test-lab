@@ -1,0 +1,82 @@
+name: Android core build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [android-port]
+
+concurrency:
+  group: android-core-${{ github.ref }}-${{ matrix.qt_arch }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.abi }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: armeabi-v7a
+            qt_arch: android_armv7
+          - abi: arm64-v8a
+            qt_arch: android_arm64_v8a
+    steps:
+      - name: Checkout source and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.2.12479018'
+
+      - name: Install Qt for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: linux
+          target: android
+          arch: ${{ matrix.qt_arch }}
+          modules: qtsvg qttools
+          cache: true
+          install-deps: true
+
+      - name: Configure Android core
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          which qt-cmake
+          qt-cmake -S . -B build-android -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_PLATFORM=android-28 \
+            -DANDROID_ABI=${{ matrix.abi }} \
+            -DBUILD_TESTS=OFF
+
+      - name: Build LibreCAD core and application target
+        run: |
+          cmake --build build-android --parallel --target librecad_lib librecad
+
+      - name: Collect Android outputs
+        if: always()
+        run: |
+          mkdir -p android-artifacts
+          find build-android -type f \( -name '*.apk' -o -name '*.aab' -o -name 'liblibrecad*' -o -name 'librecad' \) -print -exec cp {} android-artifacts/ \; || true
+          find android-artifacts -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Upload Android outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: librecad-${{ matrix.abi }}
+          path: android-artifacts
+          if-no-files-found: warn
+          retention-days: 7
