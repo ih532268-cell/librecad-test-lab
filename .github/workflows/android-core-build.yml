@@ -6,7 +6,7 @@ on:
     branches: [android-port]
 
 concurrency:
-  group: android-core-${{ github.ref }}-${{ matrix.qt_arch }}
+  group: android-core-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
