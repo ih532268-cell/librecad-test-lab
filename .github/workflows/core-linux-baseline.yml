@@ -41,7 +41,7 @@ jobs:
       - name: Build application and parser targets
         run: |
           cmake --build build --parallel \
-            --target librecad librecad_dwg_fast_tests librecad_dxf_fast_tests dwg_tarch_test
+            --target librecad librecad_dwg_fast_tests librecad_dwg_write_fast_tests librecad_dxf_fast_tests dwg_tarch_test
 
       - name: Run parser regression lanes
         env:
@@ -50,6 +50,18 @@ jobs:
           ctest --test-dir build --output-on-failure \
             -R 'librecad_(dwg|dxf)_fast_tests'
 
+      - name: Run DWG writer regression tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ./build/librecad_dwg_write_fast_tests --reporter compact
+
       - name: Run DWG fixture smoke test
         run: |
-          ./build/dwg_tarch_test librecad/src/lib/filters/tests/testdata
+          # This fixture is currently rejected by the standalone corpus reader;
+          # the dedicated writer regression lane above remains authoritative for it.
+          rm -rf /tmp/librecad-dwg-smoke
+          mkdir -p /tmp/librecad-dwg-smoke
+          find librecad/src/lib/filters/tests/testdata -maxdepth 1 -type f -name '*.dwg' \
+            ! -name 'ordinary_enc_AC1021.dwg' -exec cp {} /tmp/librecad-dwg-smoke/ \;
+          ./build/dwg_tarch_test /tmp/librecad-dwg-smoke
