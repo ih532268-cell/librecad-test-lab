@@ -4,6 +4,15 @@ on:
   workflow_dispatch:
   push:
     branches: [android-port]
+    paths:
+      - 'CMakeLists.txt'
+      - 'librecad/**'
+      - 'libraries/**'
+      - 'plugins/**'
+      - 'externals/**'
+      - 'tests/**'
+      - '.github/workflows/core-linux-baseline.yml'
+      - '.github/workflows/android-core-build.yml'
 
 concurrency:
   group: core-linux-${{ github.ref }}

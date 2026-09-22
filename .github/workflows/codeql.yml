@@ -1,18 +1,7 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [ 'master' ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ 'master' ]
-  schedule:
-    - cron: '59 14 * * 2'
-
-# A newer push to the same branch or pull request supersedes a run still in progress.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
   analyze:
