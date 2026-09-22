@@ -46,7 +46,6 @@ jobs:
           host: linux
           target: android
           arch: ${{ matrix.qt_arch }}
-          modules: qtsvg qttools
           cache: true
           install-deps: true
 
