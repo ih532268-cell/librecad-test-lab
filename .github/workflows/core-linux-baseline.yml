@@ -1,0 +1,55 @@
+name: Core Linux baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [android-port]
+
+concurrency:
+  group: core-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source and submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install LibreCAD build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build g++ pkg-config \
+            qt6-base-dev qt6-declarative-dev qt6-svg-dev \
+            qt6-image-formats-plugin-pdf qt6-image-formats-plugins \
+            qt6-pdf-dev qt6-tools-dev qt6-l10n-tools \
+            qt6-wayland qt6-wayland-dev \
+            libgl-dev libxcb-cursor0 libmuparser-dev libboost-dev \
+            libssl-dev libfreetype6-dev libicu-dev
+
+      - name: Configure core and regression tests
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DBUILD_TESTS=ON \
+            -DLIBRECAD_REGISTER_FORMAT_TESTS=ON
+
+      - name: Build application and parser targets
+        run: |
+          cmake --build build --parallel \
+            --target librecad librecad_dwg_fast_tests librecad_dxf_fast_tests dwg_tarch_test
+
+      - name: Run parser regression lanes
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --test-dir build --output-on-failure \
+            -R 'librecad_(dwg|dxf)_fast_tests'
+
+      - name: Run DWG fixture smoke test
+        run: |
+          ./build/dwg_tarch_test librecad/src/lib/filters/tests/testdata
